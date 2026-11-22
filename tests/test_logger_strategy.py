@@ -3,18 +3,17 @@ from pathlib import Path
 
 import pytest
 
-from logger import (
-    ConsoleOutputStrategy,
-    FileOutputStrategy,
-    Logger,
-    LogLevel,
-    UpperFileOutputStrategy,
+from creators import (
+    ConsoleStrategyCreator,
+    FileStrategyCreator,
+    UpperFileStrategyCreator,
 )
+from logger import ConsoleOutputStrategy, Logger, LogLevel
 
 
 # Тест проверяет вывод отформатированного сообщения в консоль.
 def test_console_strategy_prints_formatted_message(capsys: pytest.CaptureFixture[str]) -> None:
-    logger = Logger(ConsoleOutputStrategy())
+    logger = Logger(ConsoleStrategyCreator())
 
     result = logger.log(LogLevel.INFO, "Application started")
 
@@ -25,7 +24,7 @@ def test_console_strategy_prints_formatted_message(capsys: pytest.CaptureFixture
 # Тест проверяет создание каталога и запись сообщения в файл.
 def test_file_strategy_appends_message(tmp_path: Path) -> None:
     path = tmp_path / "nested" / "app.log"
-    logger = Logger(FileOutputStrategy(path))
+    logger = Logger(FileStrategyCreator(), path)
 
     result = logger.log(LogLevel.WARN, "Low disk space")
 
@@ -38,7 +37,7 @@ def test_file_strategy_appends_message(tmp_path: Path) -> None:
 # Тест проверяет запись всей отформатированной строки в верхнем регистре.
 def test_upper_file_strategy_writes_uppercase(tmp_path: Path) -> None:
     path = tmp_path / "app.log"
-    logger = Logger(UpperFileOutputStrategy(path))
+    logger = Logger(UpperFileStrategyCreator(), path)
 
     logger.log(LogLevel.ERROR, "Something happened")
 
@@ -48,7 +47,7 @@ def test_upper_file_strategy_writes_uppercase(tmp_path: Path) -> None:
 
 # Тест проверяет допустимое преобразование строкового уровня в LogLevel.
 def test_string_log_level_is_accepted() -> None:
-    logger = Logger(ConsoleOutputStrategy())
+    logger = Logger(ConsoleStrategyCreator())
 
     result = logger.log("TRACE", "Trace message")
 
@@ -57,7 +56,7 @@ def test_string_log_level_is_accepted() -> None:
 
 # Негативный тест проверяет отклонение неизвестного строкового уровня.
 def test_unknown_string_log_level_is_rejected() -> None:
-    logger = Logger(ConsoleOutputStrategy())
+    logger = Logger(ConsoleStrategyCreator())
 
     try:
         logger.log("DEBUG", "Debug message")
@@ -69,7 +68,7 @@ def test_unknown_string_log_level_is_rejected() -> None:
 
 # Негативный тест проверяет отклонение сообщения неверного типа.
 def test_non_string_message_is_rejected() -> None:
-    logger = Logger(ConsoleOutputStrategy())
+    logger = Logger(ConsoleStrategyCreator())
 
     try:
         logger.log(LogLevel.INFO, 123)
@@ -81,7 +80,7 @@ def test_non_string_message_is_rejected() -> None:
 
 # Тест проверяет возможность явной замены текущей Strategy.
 def test_strategy_can_be_changed() -> None:
-    logger = Logger(ConsoleOutputStrategy())
+    logger = Logger(ConsoleStrategyCreator())
 
     logger.set_strategy(ConsoleOutputStrategy())
 
@@ -89,8 +88,8 @@ def test_strategy_can_be_changed() -> None:
     assert "[FATAL] Fatal message" in result
 
 
-# Негативный тест проверяет отклонение объекта, не реализующего интерфейс Strategy.
-def test_non_strategy_object_is_rejected() -> None:
+# Негативный тест проверяет отклонение объекта, не реализующего интерфейс Creator или Strategy.
+def test_non_creator_object_is_rejected() -> None:
     try:
         Logger(object())
     except TypeError:

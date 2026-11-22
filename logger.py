@@ -50,7 +50,22 @@ class UpperFileOutputStrategy(OutputStrategy):
 class Logger:
     """Контекст Strategy. Форматирует сообщение и делегирует вывод стратегии."""
 
-    def __init__(self, strategy: OutputStrategy) -> None:
+    def __init__(
+        self,
+        creator: object,
+        log_file: str | Path = "application.log",
+    ) -> None:
+        self.set_creator(creator, log_file)
+
+    def set_creator(
+        self,
+        creator: object,
+        log_file: str | Path = "application.log",
+    ) -> None:
+        if not hasattr(creator, "create"):
+            raise TypeError("Creator должен предоставлять метод create")
+
+        strategy = creator.create(log_file)
         self.set_strategy(strategy)
 
     def set_strategy(self, strategy: OutputStrategy) -> None:
@@ -66,18 +81,18 @@ class Logger:
             try:
                 return LogLevel(level)
             except ValueError:
-                raise ValueError(f"Unknown log level: {level}") from None
+                raise ValueError(f"Неизвестный уровень журнала: {level}") from None
 
-        raise TypeError("Log level must be a LogLevel or a string")
+        raise TypeError("Уровень журнала должен быть LogLevel или строкой")
 
     def _format(self, level: LogLevel | str, message: str) -> str:
         normalized_level = self._normalize_level(level)
 
         if not isinstance(message, str):
-            raise TypeError("Message must be a string")
+            raise TypeError("Сообщение должно быть строкой")
 
         if message == "":
-            raise ValueError("Message must not be empty")
+            raise ValueError("Сообщение не должно быть пустым")
 
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         return f"{timestamp} [{normalized_level.value}] {message}"
